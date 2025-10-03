@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "superset-toolkit"
+version = "0.1.0"
+description = "Professional toolkit for Superset API automation - datasets, charts, and dashboards"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "Open Source Contributors"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "typing-extensions>=4.0.0"
+]
+keywords = ["superset", "dashboard", "automation", "api", "charts", "datasets"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Visualization"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0"
+]
+cli = [
+    "typer[all]>=0.9.0",
+    "rich>=13.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/daviddallakyan2005/superset-toolkit"
+Repository = "https://github.com/daviddallakyan2005/superset-toolkit.git"
+Documentation = "https://github.com/daviddallakyan2005/superset-toolkit#readme"
+Issues = "https://github.com/daviddallakyan2005/superset-toolkit/issues"
+
+[project.scripts]
+superset-toolkit = "superset_toolkit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
