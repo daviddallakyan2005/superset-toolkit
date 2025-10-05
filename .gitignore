@@ -183,4 +183,5 @@ secrets.py
 credentials.json
 *.key
 *.pem
+activate_local_package.md
 PUBLISHING.md
