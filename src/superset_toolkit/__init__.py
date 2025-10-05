@@ -50,7 +50,7 @@ Production-grade SDK with both low-level building blocks and high-level convenie
 from .client import SupersetClient
 from .exceptions import SupersetToolkitError, AuthenticationError, SupersetApiError
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "SupersetClient",
