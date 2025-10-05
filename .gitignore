@@ -183,3 +183,4 @@ secrets.py
 credentials.json
 *.key
 *.pem
+PUBLISHING.md
