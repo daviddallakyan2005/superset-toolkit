@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """
-Basic usage example for Superset Toolkit.
+Basic Usage Example - Professional Client Methods
 
-This example shows how to:
-1. Create a SupersetClient
-2. Perform basic Superset operations
-3. Handle errors gracefully
+This example shows the simplest way to use Superset Toolkit with professional patterns:
+1. Client-centric operations (no session/base_url repetition)
+2. Username-aware functions (no manual user ID resolution)
+3. Context managers for clean resource management
 
-Before running, set these environment variables:
-- SUPERSET_URL
-- SUPERSET_USERNAME
-- SUPERSET_PASSWORD
-- SUPERSET_SCHEMA (optional, defaults to 'reports')
-- SUPERSET_DATABASE_NAME (optional, defaults to 'Trino')
+Update the configuration below and run: python3 basic_usage.py
 """
 
 import os
@@ -22,47 +17,102 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from superset_toolkit import SupersetClient
-from superset_toolkit.ensure import get_database_id_by_name
-from superset_toolkit.datasets import ensure_dataset, refresh_dataset_metadata
-from superset_toolkit.charts import create_table_chart
-from superset_toolkit.dashboard import ensure_dashboard, add_charts_to_dashboard
+from superset_toolkit.config import Config
 from superset_toolkit.exceptions import SupersetToolkitError
 
 
 def main():
-    """Run the basic usage example."""
+    """Run the basic usage example with professional patterns."""
+    
+    print("🚀 Basic Usage Example - Professional Client")
+    print("=" * 60)
+    
+    # Configure connection (update with your details)
+    config = Config(
+        superset_url="https://your-superset-instance.com",  # Update with your Superset URL
+        username="your-username",                           # Update with your username
+        password="your-secure-password",                    # Update with your password
+        schema="your-schema",                               # Update with your schema
+        database_name="your-database"                       # Update with your database name
+    )
+    
     try:
-        print("🚀 Creating Superset client...")
-        
-        # Create client (will authenticate automatically)
-        client = SupersetClient()
-        
-        print(f"✅ Connected to Superset: {client.base_url}")
-        print(f"👤 Authenticated as user ID: {client.user_id}")
-        print(f"📊 Using schema: {client.config.schema}")
-        print(f"🗄️ Using database: {client.config.database_name}")
-        
-        # Example: Create a simple table chart and dashboard
-        print("\n📊 Running basic Superset operations...")
-        
-        session = client.session
-        base_url = client.base_url
-        user_id = client.user_id
-        
-        # 1. Get database ID
-        database_id = get_database_id_by_name(session, base_url, client.config.database_name)
-        print(f"Database ID: {database_id}")
-        
-        # 2. Ensure a dataset exists (replace 'your_table' with actual table name)
-        print("Note: Replace 'your_table' with an actual table name in your database")
-        # dataset_id = ensure_dataset(session, base_url, database_id, client.config.schema, "your_table")
-        # print(f"Dataset ID: {dataset_id}")
-        
-        print("\n🎉 Basic operations example completed!")
-        print("💡 Uncomment the dataset operations above and provide real table names to test fully")
+        # Professional pattern: Use context manager
+        with SupersetClient(config=config) as client:
+            
+            # Test connection
+            status = client.validate_connection()
+            print(f"✅ Connection: {status['status']}")
+            print(f"   URL: {status['url']}")
+            print(f"   User ID: {status['user_id']}")
+            print(f"   Schema: {status['schema']}")
+            print(f"   Database: {status['database']}")
+            
+            # ========================================================
+            # BASIC CHART CREATION (Professional Way)
+            # ========================================================
+            print("\n📊 Creating a basic chart...")
+            
+            chart_id = client.create_table_chart(
+                name="Basic Example Chart",
+                table="your_table_name",  # Update with your actual table name
+                columns=["column1", "column2", "column3"],  # Update with your columns
+                row_limit=50
+            )
+            
+            print(f"✅ Created chart ID: {chart_id}")
+            
+            # ========================================================
+            # BASIC DASHBOARD CREATION
+            # ========================================================
+            print("\n🖥️ Creating a basic dashboard...")
+            
+            dashboard_id = client.create_dashboard(
+                title="Basic Example Dashboard",
+                slug="basic-example-dashboard",
+                charts=["Basic Example Chart"]  # Auto-links the chart we created
+            )
+            
+            print(f"✅ Created dashboard ID: {dashboard_id}")
+            print(f"🌐 View at: {client.base_url}/superset/dashboard/basic-example-dashboard/")
+            
+            # ========================================================
+            # QUERY OPERATIONS  
+            # ========================================================
+            print("\n🔍 Querying resources...")
+            
+            # Get your charts
+            my_charts = client.get_charts(owner="your-username")  # Update with your username
+            print(f"You have {len(my_charts)} charts")
+            
+            # Get your dashboards
+            my_dashboards = client.get_dashboards(owner="your-username")  # Update with your username  
+            print(f"You have {len(my_dashboards)} dashboards")
+            
+            # ========================================================
+            # OPTIONAL: CLEANUP
+            # ========================================================
+            print("\n🧹 Cleanup (optional)...")
+            print("To clean up test resources, uncomment the line below:")
+            print("# client.cleanup_user('admin', dry_run=False)")
+            
+            # Uncomment to actually clean up:
+            # cleanup_result = client.cleanup_user("admin", dry_run=False)
+            # print(f"Deleted {len(cleanup_result['chart_ids'])} charts, {len(cleanup_result['dashboard_ids'])} dashboards")
+            
+        # Context manager automatically cleans up session
+        print("\n✅ Basic example completed successfully!")
+        print("\n💡 Next Steps:")
+        print("   1. Check other examples in examples/ directory")
+        print("   2. Read docs/ for comprehensive guides")
+        print("   3. Explore advanced features like batch operations")
         
     except SupersetToolkitError as e:
         print(f"❌ Superset Toolkit Error: {e}")
+        print("\n💡 Troubleshooting:")
+        print("   1. Check your configuration (URL, credentials)")
+        print("   2. Verify table name exists in your database")
+        print("   3. Ensure user has proper permissions")
         sys.exit(1)
     except Exception as e:
         print(f"❌ Unexpected Error: {e}")

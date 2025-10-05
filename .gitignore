@@ -160,7 +160,10 @@ cython_debug/
 
 # IDE
 .vscode/
+.env
+env/
 .idea/
+activate_local_package.md
 
 # OS
 .DS_Store
@@ -180,3 +183,4 @@ secrets.py
 credentials.json
 *.key
 *.pem
+PUBLISHING.md

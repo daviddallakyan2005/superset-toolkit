@@ -1,16 +1,17 @@
-# Superset Toolkit
+# 🚀 Superset Toolkit
 
-Professional toolkit for Apache Superset API automation - datasets, charts, and dashboards.
+**Production-grade SDK for Apache Superset API automation with professional patterns.**
 
-## Features
+## ✨ Key Features
 
-- **Authentication & Session Management**: Automatic login, CSRF token handling, and session management
-- **Dataset Operations**: Create, ensure, refresh, and manage Superset datasets
-- **Chart Creation**: Support for pivot tables, regular tables, pie charts, histograms, area charts, and more
-- **Dashboard Management**: Create dashboards, manage layouts, apply custom CSS
-- **Orchestrated Flows**: Pre-built flows for common dashboard patterns
-- **CLI Interface**: Command-line interface for easy automation
-- **Type Safety**: Full type hints for better development experience
+- 🎯 **Client-Centric Design**: No more repetitive `(session, base_url)` parameters
+- 👤 **Username-Aware Operations**: Work with usernames directly, no manual ID resolution
+- 🔧 **JWT-Based Authentication**: Robust user ID extraction from tokens (works for any user)
+- 🚀 **Composite Workflows**: Complete operations in single function calls  
+- 📦 **Batch Operations**: Efficient bulk chart/dashboard management
+- 🧹 **Resource Lifecycle**: Context managers with automatic cleanup
+- 🛡️ **Professional Error Handling**: Graceful fallbacks and detailed logging
+- 📊 **Full Chart Support**: Table, pie, histogram, area charts with username support
 
 ## Installation
 
@@ -32,222 +33,256 @@ pip install -e ".[cli]"
 pip install -e ".[dev]"
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
-### Environment Variables
-
-Set these environment variables before using the toolkit:
-
-```bash
-export SUPERSET_URL="https://your-superset-instance.com"
-export SUPERSET_USERNAME="your-username"
-export SUPERSET_PASSWORD="your-password"
-export SUPERSET_SCHEMA="your_schema"  # Optional, defaults to 'reports'
-export SUPERSET_DATABASE_NAME="YourDatabase"  # Optional, defaults to 'Trino'
-```
-
-### Basic Usage
-
-```python
-from superset_toolkit import SupersetClient
-from superset_toolkit.charts import create_table_chart
-from superset_toolkit.dashboard import ensure_dashboard, add_charts_to_dashboard
-
-# Create client (authenticates automatically)
-client = SupersetClient()
-
-# Use individual components to build what you need
-session = client.session
-base_url = client.base_url
-user_id = client.user_id
-
-# Example: Create a table chart and add it to a dashboard
-# (Replace with your actual dataset ID and chart configuration)
-# chart_id = create_table_chart(session, base_url, "My Chart", dataset_id, user_id, columns=["col1", "col2"])
-# dashboard_id = ensure_dashboard(session, base_url, "My Dashboard", "my-dashboard")
-# add_charts_to_dashboard(session, base_url, dashboard_id, [chart_id])
-```
-
-### CLI Usage
-
-```bash
-# Test connection to Superset
-superset-toolkit test-connection
-
-# With custom parameters
-superset-toolkit test-connection --url https://custom-superset.com --schema custom_schema --database MyDB
-
-# Show version
-superset-toolkit version
-```
-
-## Architecture
-
-The toolkit is organized into several modules:
-
-- **`client.py`**: Main SupersetClient class that manages authentication and provides high-level access
-- **`auth.py`**: Authentication, CSRF token management, and user identification
-- **`datasets.py`**: Dataset creation, management, and metadata operations
-- **`charts.py`**: Chart creation functions for various visualization types
-- **`dashboard.py`**: Dashboard creation, layout management, and styling
-- **`ensure.py`**: Idempotent resource management (create-or-get patterns)
-- **`utils/`**: Utility functions like metric builders
-
-## Individual Operations
-
-### Dataset Management
-
-```python
-from superset_toolkit import SupersetClient
-from superset_toolkit.datasets import ensure_dataset, refresh_dataset_metadata
-
-client = SupersetClient()
-session, base_url = client.session, client.base_url
-
-# Get database ID
-from superset_toolkit.ensure import get_database_id_by_name
-database_id = get_database_id_by_name(session, base_url, "Trino")
-
-# Ensure dataset exists
-dataset_id = ensure_dataset(session, base_url, database_id, "reports", "my_table")
-
-# Refresh metadata
-refresh_dataset_metadata(session, base_url, dataset_id)
-```
-
-### Chart Creation
-
-```python
-from superset_toolkit.charts import create_table_chart, create_pie_chart
-from superset_toolkit.utils.metrics import build_simple_metric
-
-# Create a table chart
-chart_id = create_table_chart(
-    session, base_url, "My Table", dataset_id, client.user_id,
-    columns=["col1", "col2", "col3"],
-    row_limit=1000,
-    include_search=True
-)
-
-# Create a pie chart
-metric = build_simple_metric("amount", aggregate="SUM")
-pie_chart_id = create_pie_chart(
-    session, base_url, "Sales by Category", dataset_id, client.user_id,
-    metric=metric,
-    groupby=["category"]
-)
-```
-
-### Dashboard Operations
-
-```python
-from superset_toolkit.dashboard import ensure_dashboard, add_charts_to_dashboard
-
-# Create dashboard
-dashboard_id = ensure_dashboard(session, base_url, "My Dashboard", "my-dashboard")
-
-# Add charts to dashboard
-add_charts_to_dashboard(session, base_url, dashboard_id, [chart_id, pie_chart_id])
-```
-
-## Custom Configuration
+### Professional Client-Centric Usage (Recommended)
 
 ```python
 from superset_toolkit import SupersetClient
 from superset_toolkit.config import Config
 
-# Create custom config
+# Configure connection
 config = Config(
-    superset_url="https://custom-superset.com",
-    schema="custom_schema",
-    database_name="CustomDB"
+    superset_url="https://your-superset-instance.com",
+    username="your-username",
+    password="your-secure-password",
+    schema="your-schema",
+    database_name="your-database"
 )
 
-# Use with client
-client = SupersetClient(config=config)
+# Context manager with automatic cleanup
+with SupersetClient(config=config) as client:
+    
+    # Create chart (all complexity hidden)
+    chart_id = client.create_table_chart(
+        name="Sales Report",
+        table="sales_data",
+        owner="analyst"  # Just username - no ID resolution needed!
+    )
+    
+    # Create dashboard with automatic chart linking
+    dashboard_id = client.create_dashboard(
+        title="Sales Dashboard", 
+        slug="sales-dashboard",
+        owner="analyst",
+        charts=["Sales Report"]  # Auto-links existing charts
+    )
+    
+    # Query resources by owner
+    user_charts = client.get_charts(owner="analyst")
+    user_dashboards = client.get_dashboards(owner="analyst")
+    
+    # Get comprehensive user summary
+    summary = client.get_user_summary("analyst")
+    print(f"User has: {summary['summary']}")
+    
+    # Clean up everything for a user
+    client.cleanup_user("temp_user", dry_run=False)
 ```
 
-## Available Chart Types
-
-- **Pivot Tables**: `create_pivot_table_chart()`
-- **Regular Tables**: `create_table_chart()`
-- **Pie Charts**: `create_pie_chart()`
-- **Histograms**: `create_histogram_chart()`
-- **Area Charts**: `create_area_chart()`
-
-## Building Custom Solutions
-
-The toolkit provides all the building blocks you need to create custom Superset automation:
-
-### Common Patterns
-
-1. **Dataset Management**: Ensure datasets exist and refresh metadata
-2. **Chart Creation**: Create various chart types with full customization
-3. **Dashboard Assembly**: Create dashboards and arrange charts in layouts
-4. **Batch Operations**: Process multiple charts, datasets, or dashboards
-
-### Example Workflow
+### Batch & Composite Operations
 
 ```python
-# 1. Ensure your data sources are available
-dataset_id = ensure_dataset(session, base_url, database_id, schema, table_name)
-refresh_dataset_metadata(session, base_url, dataset_id)
+# Create dashboard with multiple charts in one operation
+result = client.create_dashboard_with_charts(
+    dashboard_title="Analytics Dashboard",
+    slug="analytics-dash",
+    chart_configs=[
+        {"name": "Sales Chart", "table": "sales", "columns": ["region", "amount"]},
+        {"name": "Revenue Chart", "table": "revenue", "columns": ["month", "total"]}
+    ],
+    owner="analytics_team"
+)
 
-# 2. Create charts with your data
-chart_id = create_pie_chart(session, base_url, "Sales by Region", dataset_id, user_id,
-                           metric=build_simple_metric("sales", aggregate="SUM"),
-                           groupby=["region"])
-
-# 3. Organize in dashboards
-dashboard_id = ensure_dashboard(session, base_url, "Sales Dashboard", "sales-dashboard")
-add_charts_to_dashboard(session, base_url, dashboard_id, [chart_id])
+# Create multiple charts efficiently  
+chart_ids = client.create_charts_batch([
+    {"name": "Chart 1", "table": "data1"},
+    {"name": "Chart 2", "table": "data2"},
+    {"name": "Chart 3", "table": "data3"}
+], owner="data_team")
 ```
 
-## Examples
+### Enhanced Standalone Functions (For Advanced Use Cases)
 
-Check the `examples/` directory for:
+```python
+from superset_toolkit.charts import create_table_chart
+from superset_toolkit.queries import get_charts_by_username
 
-- `basic_usage.py`: Simple usage example
-- `custom_config.py`: Custom configuration example
-- `individual_operations.py`: Using individual components
+client = SupersetClient()
 
-## Error Handling
+# Enhanced standalone functions now support username parameter
+chart_id = create_table_chart(
+    client.session, client.base_url, 
+    "Advanced Chart", dataset_id,
+    username="data_analyst"  # No manual user ID resolution!
+)
 
-The toolkit provides custom exceptions:
+# Direct function calls for specific operations
+charts = get_charts_by_username(client.session, client.base_url, "data_analyst")
+```
 
-- `SupersetToolkitError`: Base exception
-- `AuthenticationError`: Authentication failures
-- `SupersetApiError`: API-related errors
-- `DatasetNotFoundError`: Dataset not found
-- `ChartCreationError`: Chart creation failures
-- `DashboardError`: Dashboard operation errors
-
-## Development
-
-### Running Tests
+### Environment Variables (Optional)
 
 ```bash
-pytest
+export SUPERSET_URL="https://your-superset-instance.com"
+export SUPERSET_USERNAME="your-username" 
+export SUPERSET_PASSWORD="your-password"
+export SUPERSET_SCHEMA="your_schema"  # Optional, defaults to 'reports'
+export SUPERSET_DATABASE_NAME="YourDatabase"  # Optional, defaults to 'Trino'
 ```
 
-### Code Formatting
+
+**Module Organization:**
+- **`client.py`**: Enhanced SupersetClient with professional methods
+- **`auth.py`**: JWT-based authentication with permission-aware fallbacks
+- **`charts.py`**: Username-aware chart creation (table, pie, histogram, area)
+- **`dashboard.py`**: Dashboard creation with automatic chart linking
+- **`queries.py`**: Resource filtering and querying by owner/dataset
+- **`datasets.py`**: Dataset management with permission handling
+
+## 📊 Advanced Usage Examples
+
+### Multiple Chart Types with Username Support
+
+```python
+with SupersetClient() as client:
+    # Table chart
+    table_chart = client.create_chart_from_table(
+        chart_name="Sales Data",
+        table="sales",
+        owner="analyst",
+        chart_type="table",
+        columns=["region", "amount", "date"]
+    )
+    
+    # Pie chart  
+    pie_chart = client.create_chart_from_table(
+        chart_name="Sales by Region", 
+        table="sales",
+        owner="analyst",
+        chart_type="pie",
+        metric={"aggregate": "SUM", "column": {"column_name": "amount"}},
+        groupby=["region"]
+    )
+    
+    # Histogram
+    hist_chart = client.create_chart_from_table(
+        chart_name="Amount Distribution",
+        table="sales", 
+        owner="analyst",
+        chart_type="histogram",
+        all_columns_x=["amount"],
+        bins=10
+    )
+```
+
+### Resource Management & Migration
+
+```python
+with SupersetClient() as client:
+    # Get comprehensive user summary
+    summary = client.get_user_summary("data_analyst")
+    print(f"User has: {summary['summary']}")
+    
+    # Migrate resources between users
+    result = client.migrate_user_resources(
+        from_user="old_analyst", 
+        to_user="new_analyst",
+        dry_run=False
+    )
+    
+    # Clean up user resources
+    cleanup = client.cleanup_user("temp_user", dry_run=False)
+    print(f"Deleted: {len(cleanup['chart_ids'])} charts, {len(cleanup['dashboard_ids'])} dashboards")
+```
+
+## 🔧 Installation & Setup
 
 ```bash
-black src/
-isort src/
+# Install the toolkit
+pip install -e .
+
+# Optional: Install with CLI support  
+pip install -e ".[cli]"
 ```
 
-### Type Checking
+## 🎯 Why Choose This SDK?
 
-```bash
-mypy src/
+**Before (Traditional Approach):**
+```python
+# Manual user ID resolution, parameter repetition, fragmented operations
+user_id = get_user_id_by_username(session, base_url, "john")
+dataset_id = ensure_dataset(session, base_url, db_id, schema, table)  
+chart_id = create_table_chart(session, base_url, name, dataset_id, user_id)
+dashboard_id = ensure_dashboard(session, base_url, title, slug)
+link_chart_to_dashboard(session, base_url, chart_id, dashboard_id)
 ```
 
-## License
+**After (Professional SDK):**
+```python
+# Clean, username-first, composite operations
+with SupersetClient() as client:
+    chart_id = client.create_table_chart("Report", table="sales", owner="analyst")
+    dashboard_id = client.create_dashboard("Dashboard", "dashboard", charts=["Report"])
+```
 
-MIT License
+## 📚 Documentation
 
-## Author
+- 📖 **[Full Documentation](docs/)** - Comprehensive guides and API reference
+- 🎯 **[Examples](examples/)** - Ready-to-run examples for common patterns
+- 🔧 **[Configuration Guide](docs/CONFIGURATION.md)** - Setup and customization
+- 👤 **[User Management](docs/USER_MANAGEMENT.md)** - Username-aware operations
 
-Open source project  
-[GitHub Repository](https://github.com/daviddallakyan2005/superset-toolkit)
+## 🎯 Supported Chart Types
+
+| Chart Type | Client Method | Standalone Function | Username Support |
+|------------|---------------|--------------------|-----------------| 
+| **Table** | `client.create_table_chart()` | `create_table_chart()` | ✅ |
+| **Pie** | `client.create_chart_from_table(type="pie")` | `create_pie_chart()` | ✅ |
+| **Histogram** | `client.create_chart_from_table(type="histogram")` | `create_histogram_chart()` | ✅ |
+| **Area** | `client.create_chart_from_table(type="area")` | `create_area_chart()` | ✅ |
+| **Pivot** | Available via standalone function | `create_pivot_table_chart()` | ✅ |
+
+## 🛡️ Error Handling & Permissions
+
+The SDK gracefully handles permission restrictions:
+- **JWT Token Extraction**: Gets user ID without requiring admin permissions
+- **403 Fallback Logic**: Smart fallbacks for non-admin users
+- **Professional Exceptions**: Clear error messages with context
+
+```python
+# Robust error handling
+try:
+    chart_id = client.create_table_chart("Report", table="sales", owner="user") 
+except AuthenticationError as e:
+    print(f"Auth issue: {e}")
+except SupersetToolkitError as e:
+    print(f"Operation failed: {e}")
+```
+
+## 📁 Project Structure
+
+```
+superset_toolkit/
+├── 📖 docs/              # Comprehensive documentation
+├── 🎯 examples/          # Ready-to-run examples  
+├── 🔧 src/superset_toolkit/
+│   ├── client.py         # Professional SupersetClient class
+│   ├── auth.py          # JWT + permission-aware authentication
+│   ├── charts.py        # Username-aware chart creation
+│   ├── dashboard.py     # Dashboard management 
+│   ├── queries.py       # Resource filtering and queries
+│   └── utils/           # Utilities (metrics, etc.)
+└── 🧪 src/superset-api-test/  # Test scripts
+```
+
+## 🚀 Getting Started
+
+1. **Install**: `pip install -e .`
+2. **Configure**: Set up credentials (Config class or env vars)  
+3. **Explore**: Check `examples/` for common patterns
+4. **Read Docs**: Review `docs/` for comprehensive guides
+
+## 📝 License & Contributing
+
+MIT License - Open source project for the Superset community.

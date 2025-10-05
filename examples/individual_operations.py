@@ -42,12 +42,13 @@ def main():
         
         # 2. Ensure a dataset exists
         print("\n📊 Ensuring dataset exists...")
+        print("Note: Update 'your_table_name' with an actual table in your database")
         dataset_id = ensure_dataset(
             session, 
             base_url, 
             database_id, 
             client.config.schema, 
-            "business__timelaps_dash_illustration__project_submissions"
+            "your_table_name"  # Update with your actual table name
         )
         print(f"Dataset ID: {dataset_id}")
         
@@ -57,38 +58,47 @@ def main():
         
         # 4. Create a simple table chart
         print("\n📊 Creating a table chart...")
-        from superset_toolkit.datasets import get_dataset_column_names
-        columns = get_dataset_column_names(session, base_url, dataset_id)
-        
-        chart_id = create_table_chart(
-            session,
-            base_url,
-            "Example Table Chart",
-            dataset_id,
-            user_id,
-            columns=columns[:5],  # Just first 5 columns
-            row_limit=100,
-            include_search=True,
-            table_filter=True
-        )
-        print(f"Chart ID: {chart_id}")
-        
-        # 5. Create a dashboard
-        print("\n📊 Creating dashboard...")
-        dashboard_id = ensure_dashboard(
-            session,
-            base_url,
-            "Example Dashboard",
-            "example-dashboard"
-        )
-        print(f"Dashboard ID: {dashboard_id}")
-        
-        # 6. Add chart to dashboard
-        print("\n📐 Adding chart to dashboard...")
-        add_charts_to_dashboard(session, base_url, dashboard_id, [chart_id])
-        
-        print(f"\n🎉 Individual operations completed successfully!")
-        print(f"📊 Dashboard URL: {base_url}/superset/dashboard/{dashboard_id}/")
+        try:
+            from superset_toolkit.datasets import get_dataset_column_names
+            columns = get_dataset_column_names(session, base_url, dataset_id)
+            
+            chart_id = create_table_chart(
+                session,
+                base_url,
+                "Example Table Chart",
+                dataset_id,
+                user_id,
+                columns=columns[:5],  # Just first 5 columns
+                row_limit=100,
+                include_search=True,
+                table_filter=True
+            )
+        except Exception as e:
+            print(f"⚠️  Chart creation skipped (dataset issue): {e}")
+            print("💡 Ensure your table name exists and is accessible")
+            chart_id = None
+        if chart_id:
+            print(f"Chart ID: {chart_id}")
+            
+            # 5. Create a dashboard
+            print("\n📊 Creating dashboard...")
+            dashboard_id = ensure_dashboard(
+                session,
+                base_url,
+                "Example Dashboard",
+                "example-dashboard"
+            )
+            print(f"Dashboard ID: {dashboard_id}")
+            
+            # 6. Add chart to dashboard
+            print("\n📐 Adding chart to dashboard...")
+            add_charts_to_dashboard(session, base_url, dashboard_id, [chart_id])
+            
+            print(f"\n🎉 Individual operations completed successfully!")
+            print(f"📊 Dashboard URL: {base_url}/superset/dashboard/{dashboard_id}/")
+        else:
+            print("\n💡 Individual operations example completed with notes")
+            print("   Update the table name to create actual charts and dashboards")
         
     except SupersetToolkitError as e:
         print(f"❌ Superset Toolkit Error: {e}")

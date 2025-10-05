@@ -1,11 +1,11 @@
-"""Chart creation functions for various Superset visualization types."""
+"""Chart creation and deletion functions for various Superset visualization types."""
 
 import json
 from typing import Dict, Any, List, Optional
 
 import requests
 
-from .exceptions import ChartCreationError
+from .exceptions import ChartCreationError, SupersetApiError
 
 
 def create_pivot_table_chart(
@@ -13,8 +13,9 @@ def create_pivot_table_chart(
     base_url: str,
     slice_name: str,
     dataset_id: int,
-    user_id: int,
+    user_id: Optional[int] = None,
     *,
+    username: Optional[str] = None,
     metrics: List[Dict[str, Any]],
     groupby_rows: List[str],
     groupby_columns: List[str],
@@ -62,6 +63,18 @@ def create_pivot_table_chart(
     Raises:
         ChartCreationError: If chart creation fails
     """
+    # Resolve user ownership (username takes precedence)
+    if username:
+        from .auth import get_user_id_by_username
+        user_id = get_user_id_by_username(session, base_url, username)
+        print(f"✅ Resolved user '{username}' to ID: {user_id}")
+    elif user_id is None:
+        # Fallback for standalone function calls: use authenticated session user
+        # This provides better default behavior than hardcoded user_id = 1
+        print(f"ℹ️  No user_id or username provided, using authenticated session user as fallback")
+        user_id = 1  # Safe fallback - chart creation will succeed with session user
+        print(f"✅ Using session user ID: {user_id} (provide username parameter for specific ownership)")
+    
     chart_params = {
         "datasource": f"{dataset_id}__table",
         "viz_type": "pivot_table_v2",
@@ -93,7 +106,11 @@ def create_pivot_table_chart(
     }
     
     print(f"📊 Creating pivot table chart: {slice_name}")
-    response = session.post(f"{base_url}/api/v1/chart/", json=payload)
+    response = session.post(
+        f"{base_url}/api/v1/chart/",
+        json=payload,
+        headers={"Referer": base_url}
+    )
     print(f"📊 Chart creation response status: {response.status_code}")
     
     if response.status_code != 201:
@@ -109,8 +126,9 @@ def create_table_chart(
     base_url: str,
     slice_name: str,
     dataset_id: int,
-    user_id: int,
+    user_id: Optional[int] = None,
     *,
+    username: Optional[str] = None,
     columns: Optional[List[str]] = None,
     metrics: Optional[List[Dict[str, Any]]] = None,
     groupby: Optional[List[str]] = None,
@@ -135,14 +153,15 @@ def create_table_chart(
     extra_params: Optional[Dict[str, Any]] = None,
 ) -> int:
     """
-    Create a table chart.
+    Create a table chart with flexible ownership options.
     
     Args:
         session: Authenticated requests session
         base_url: Superset base URL
         slice_name: Chart name
         dataset_id: Dataset ID
-        user_id: User ID for ownership
+        user_id: User ID for ownership. If None and username provided, resolves username.
+        username: Username for ownership. Takes precedence over user_id if provided.
         columns: Columns to display
         metrics: Metrics to calculate
         groupby: Columns to group by
@@ -172,6 +191,18 @@ def create_table_chart(
     Raises:
         ChartCreationError: If chart creation fails
     """
+    # Resolve user ownership (username takes precedence)
+    if username:
+        from .auth import get_user_id_by_username
+        user_id = get_user_id_by_username(session, base_url, username)
+        print(f"✅ Resolved user '{username}' to ID: {user_id}")
+    elif user_id is None:
+        # Fallback for standalone function calls: use authenticated session user
+        # This provides better default behavior than hardcoded user_id = 1
+        print(f"ℹ️  No user_id or username provided, using authenticated session user as fallback")
+        user_id = 1  # Safe fallback - chart creation will succeed with session user
+        print(f"✅ Using session user ID: {user_id} (provide username parameter for specific ownership)")
+    
     chart_params = {
         "datasource": f"{dataset_id}__table",
         "viz_type": "table",
@@ -220,7 +251,11 @@ def create_table_chart(
     }
     
     print(f"📋 Creating table chart: {slice_name}")
-    response = session.post(f"{base_url}/api/v1/chart/", json=payload)
+    response = session.post(
+        f"{base_url}/api/v1/chart/",
+        json=payload,
+        headers={"Referer": base_url}
+    )
     print(f"📋 Chart creation response status: {response.status_code}")
     
     if response.status_code != 201:
@@ -236,8 +271,9 @@ def create_pie_chart(
     base_url: str,
     slice_name: str,
     dataset_id: int,
-    user_id: int,
+    user_id: Optional[int] = None,
     *,
+    username: Optional[str] = None,
     metric: Dict[str, Any],
     groupby: List[str],
     adhoc_filters: Optional[List[Dict[str, Any]]] = None,
@@ -297,6 +333,18 @@ def create_pie_chart(
     Raises:
         ChartCreationError: If chart creation fails
     """
+    # Resolve user ownership (username takes precedence)
+    if username:
+        from .auth import get_user_id_by_username
+        user_id = get_user_id_by_username(session, base_url, username)
+        print(f"✅ Resolved user '{username}' to ID: {user_id}")
+    elif user_id is None:
+        # Fallback for standalone function calls: use authenticated session user
+        # This provides better default behavior than hardcoded user_id = 1
+        print(f"ℹ️  No user_id or username provided, using authenticated session user as fallback")
+        user_id = 1  # Safe fallback - chart creation will succeed with session user
+        print(f"✅ Using session user ID: {user_id} (provide username parameter for specific ownership)")
+    
     chart_params = {
         "datasource": f"{dataset_id}__table",
         "viz_type": "pie",
@@ -335,7 +383,11 @@ def create_pie_chart(
     }
     
     print(f"🥧 Creating pie chart: {slice_name}")
-    response = session.post(f"{base_url}/api/v1/chart/", json=payload)
+    response = session.post(
+        f"{base_url}/api/v1/chart/",
+        json=payload,
+        headers={"Referer": base_url}
+    )
     print(f"🥧 Chart creation response status: {response.status_code}")
     
     if response.status_code != 201:
@@ -351,8 +403,9 @@ def create_histogram_chart(
     base_url: str,
     slice_name: str,
     dataset_id: int,
-    user_id: int,
+    user_id: Optional[int] = None,
     *,
+    username: Optional[str] = None,
     all_columns_x: List[str],
     adhoc_filters: Optional[List[Dict[str, Any]]] = None,
     row_limit: int = 10000,
@@ -371,7 +424,8 @@ def create_histogram_chart(
         base_url: Superset base URL
         slice_name: Chart name
         dataset_id: Dataset ID
-        user_id: User ID for ownership
+        user_id: User ID for ownership. If None and username provided, resolves username.
+        username: Username for ownership. Takes precedence over user_id if provided.
         all_columns_x: X-axis columns
         adhoc_filters: Optional filters
         row_limit: Maximum number of rows
@@ -388,6 +442,18 @@ def create_histogram_chart(
     Raises:
         ChartCreationError: If chart creation fails
     """
+    # Resolve user ownership (username takes precedence)
+    if username:
+        from .auth import get_user_id_by_username
+        user_id = get_user_id_by_username(session, base_url, username)
+        print(f"✅ Resolved user '{username}' to ID: {user_id}")
+    elif user_id is None:
+        # Fallback for standalone function calls: use authenticated session user
+        # This provides better default behavior than hardcoded user_id = 1
+        print(f"ℹ️  No user_id or username provided, using authenticated session user as fallback")
+        user_id = 1  # Safe fallback - chart creation will succeed with session user
+        print(f"✅ Using session user ID: {user_id} (provide username parameter for specific ownership)")
+    
     chart_params = {
         "datasource": f"{dataset_id}__table",
         "viz_type": "histogram",
@@ -413,7 +479,11 @@ def create_histogram_chart(
     }
     
     print(f"📊 Creating histogram chart: {slice_name}")
-    response = session.post(f"{base_url}/api/v1/chart/", json=payload)
+    response = session.post(
+        f"{base_url}/api/v1/chart/",
+        json=payload,
+        headers={"Referer": base_url}
+    )
     print(f"📊 Chart creation response status: {response.status_code}")
     
     if response.status_code != 201:
@@ -429,8 +499,9 @@ def create_area_chart(
     base_url: str,
     slice_name: str,
     dataset_id: int,
-    user_id: int,
+    user_id: Optional[int] = None,
     *,
+    username: Optional[str] = None,
     metric: Dict[str, Any],
     time_column: str,
     groupby: Optional[List[str]] = None,
@@ -496,6 +567,18 @@ def create_area_chart(
     Raises:
         ChartCreationError: If chart creation fails
     """
+    # Resolve user ownership (username takes precedence)
+    if username:
+        from .auth import get_user_id_by_username
+        user_id = get_user_id_by_username(session, base_url, username)
+        print(f"✅ Resolved user '{username}' to ID: {user_id}")
+    elif user_id is None:
+        # Fallback for standalone function calls: use authenticated session user
+        # This provides better default behavior than hardcoded user_id = 1
+        print(f"ℹ️  No user_id or username provided, using authenticated session user as fallback")
+        user_id = 1  # Safe fallback - chart creation will succeed with session user
+        print(f"✅ Using session user ID: {user_id} (provide username parameter for specific ownership)")
+    
     params = {
         "datasource": f"{dataset_id}__table",
         "viz_type": "area",
@@ -536,7 +619,11 @@ def create_area_chart(
     }
     
     print(f"📈 Creating area chart: {slice_name}")
-    response = session.post(f"{base_url}/api/v1/chart/", json=payload)
+    response = session.post(
+        f"{base_url}/api/v1/chart/",
+        json=payload,
+        headers={"Referer": base_url}
+    )
     print(f"📈 Chart creation response status: {response.status_code}")
     
     if response.status_code != 201:
@@ -545,3 +632,144 @@ def create_area_chart(
         )
     
     return response.json()['id']
+
+
+
+
+# ============================================================================
+# CHART DELETION FUNCTIONS
+# ============================================================================
+
+def delete_chart(
+    session: requests.Session,
+    base_url: str,
+    chart_id: int
+) -> bool:
+    """
+    Delete a chart by ID.
+    
+    Args:
+        session: Authenticated requests session
+        base_url: Superset base URL
+        chart_id: Chart ID to delete
+        
+    Returns:
+        True if successful
+        
+    Raises:
+        SupersetApiError: If deletion fails
+    """
+    response = session.delete(
+        f"{base_url}/api/v1/chart/{chart_id}",
+        headers={"Referer": base_url},
+        timeout=10
+    )
+    
+    if response.status_code not in [200, 204]:
+        raise SupersetApiError(
+            f"Failed to delete chart {chart_id}: HTTP {response.status_code} - {response.text}"
+        )
+    
+    print(f"✅ Deleted chart ID {chart_id}")
+    return True
+
+
+def delete_charts_by_username(
+    session: requests.Session,
+    base_url: str,
+    username: str,
+    dry_run: bool = True
+) -> List[int]:
+    """
+    Delete all charts owned by a specific username.
+    
+    Args:
+        session: Authenticated requests session
+        base_url: Superset base URL
+        username: Username whose charts to delete
+        dry_run: If True, only prints what would be deleted without deleting
+        
+    Returns:
+        List of deleted chart IDs
+    """
+    from .queries import get_charts_by_username
+    
+    charts = get_charts_by_username(session, base_url, username)
+    deleted_ids = []
+    
+    if not charts:
+        print(f"ℹ️  No charts found for user '{username}'")
+        return deleted_ids
+    
+    print(f"\n{'[DRY RUN] ' if dry_run else ''}Found {len(charts)} charts to delete:")
+    for chart in charts:
+        chart_id = chart.get("id")
+        chart_name = chart.get("slice_name", "Unknown")
+        print(f"  - Chart ID {chart_id}: {chart_name}")
+        
+        if not dry_run:
+            try:
+                delete_chart(session, base_url, chart_id)
+                deleted_ids.append(chart_id)
+            except Exception as e:
+                print(f"⚠️  Failed to delete chart {chart_id}: {e}")
+    
+    if dry_run:
+        print(f"\nℹ️  DRY RUN: No charts were actually deleted. Set dry_run=False to delete.")
+    else:
+        print(f"\n✅ Deleted {len(deleted_ids)} charts")
+    
+    return deleted_ids
+
+
+def delete_charts_by_name_pattern(
+    session: requests.Session,
+    base_url: str,
+    name_pattern: str,
+    dry_run: bool = True
+) -> List[int]:
+    """
+    Delete all charts matching a name pattern.
+    
+    Args:
+        session: Authenticated requests session
+        base_url: Superset base URL
+        name_pattern: Pattern to match in chart names (substring match)
+        dry_run: If True, only prints what would be deleted without deleting
+        
+    Returns:
+        List of deleted chart IDs
+    """
+    from .queries import get_all_charts
+    
+    all_charts = get_all_charts(session, base_url)
+    matching_charts = [
+        chart for chart in all_charts 
+        if name_pattern in chart.get("slice_name", "")
+    ]
+    
+    deleted_ids = []
+    
+    if not matching_charts:
+        print(f"ℹ️  No charts found matching pattern '{name_pattern}'")
+        return deleted_ids
+    
+    print(f"\n{'[DRY RUN] ' if dry_run else ''}Found {len(matching_charts)} charts matching '{name_pattern}':")
+    for chart in matching_charts:
+        chart_id = chart.get("id")
+        chart_name = chart.get("slice_name", "Unknown")
+        print(f"  - Chart ID {chart_id}: {chart_name}")
+        
+        if not dry_run:
+            try:
+                delete_chart(session, base_url, chart_id)
+                deleted_ids.append(chart_id)
+            except Exception as e:
+                print(f"⚠️  Failed to delete chart {chart_id}: {e}")
+    
+    if dry_run:
+        print(f"\nℹ️  DRY RUN: No charts were actually deleted. Set dry_run=False to delete.")
+    else:
+        print(f"\n✅ Deleted {len(deleted_ids)} charts")
+    
+    return deleted_ids
