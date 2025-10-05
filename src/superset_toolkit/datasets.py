@@ -1,4 +1,4 @@
-"""Dataset management for Superset."""
+"""Dataset management and deletion for Superset."""
 
 from typing import List
 
@@ -38,7 +38,11 @@ def create_dataset(
     }
     
     print(f"📊 Creating dataset: {schema}.{table_name}")
-    response = session.post(f"{base_url}/api/v1/dataset/", json=payload)
+    response = session.post(
+        f"{base_url}/api/v1/dataset/",
+        json=payload,
+        headers={"Referer": base_url}
+    )
     print(f"📊 Dataset creation response status: {response.status_code}")
     
     if response.status_code != 201:
@@ -103,7 +107,10 @@ def refresh_dataset_metadata(
         SupersetApiError: If refresh fails
     """
     print(f"🔄 Refreshing dataset metadata for dataset_id={dataset_id}...")
-    response = session.put(f"{base_url}/api/v1/dataset/{dataset_id}/refresh")
+    response = session.put(
+        f"{base_url}/api/v1/dataset/{dataset_id}/refresh",
+        headers={"Referer": base_url}
+    )
     print(f"🔄 Dataset refresh status: {response.status_code}")
     
     if response.status_code not in [200, 202, 204]:
@@ -132,7 +139,8 @@ def ensure_dataset_main_dttm(
     print(f"🕒 Ensuring main datetime column '{time_column}' for dataset {dataset_id}...")
     response = session.put(
         f"{base_url}/api/v1/dataset/{dataset_id}",
-        json={"main_dttm_col": time_column}
+        json={"main_dttm_col": time_column},
+        headers={"Referer": base_url}
     )
     print(f"🕒 Set main_dttm_col response: {response.status_code}")
     
@@ -175,3 +183,95 @@ def get_dataset_column_names(
         raise DatasetNotFoundError(f"No columns returned for dataset {dataset_id}")
     
     return names
+
+
+# ============================================================================
+# DATASET DELETION FUNCTIONS
+# ============================================================================
+
+def delete_dataset(
+    session: requests.Session,
+    base_url: str,
+    dataset_id: int
+) -> bool:
+    """
+    Delete a dataset by ID.
+    
+    Args:
+        session: Authenticated requests session
+        base_url: Superset base URL
+        dataset_id: Dataset ID to delete
+        
+    Returns:
+        True if successful
+        
+    Raises:
+        SupersetApiError: If deletion fails
+    """
+    response = session.delete(
+        f"{base_url}/api/v1/dataset/{dataset_id}",
+        headers={"Referer": base_url},
+        timeout=10
+    )
+    
+    if response.status_code not in [200, 204]:
+        raise SupersetApiError(
+            f"Failed to delete dataset {dataset_id}: HTTP {response.status_code} - {response.text}"
+        )
+    
+    print(f"✅ Deleted dataset ID {dataset_id}")
+    return True
+
+
+def delete_datasets_by_name_pattern(
+    session: requests.Session,
+    base_url: str,
+    name_pattern: str,
+    dry_run: bool = True
+) -> List[int]:
+    """
+    Delete all datasets matching a name pattern.
+    
+    Args:
+        session: Authenticated requests session
+        base_url: Superset base URL
+        name_pattern: Pattern to match in dataset names (substring match)
+        dry_run: If True, only prints what would be deleted without deleting
+        
+    Returns:
+        List of deleted dataset IDs
+    """
+    from .queries import get_all_datasets
+    
+    all_datasets = get_all_datasets(session, base_url)
+    matching_datasets = [
+        dataset for dataset in all_datasets 
+        if name_pattern in dataset.get("table_name", "")
+    ]
+    
+    deleted_ids = []
+    
+    if not matching_datasets:
+        print(f"ℹ️  No datasets found matching pattern '{name_pattern}'")
+        return deleted_ids
+    
+    print(f"\n{'[DRY RUN] ' if dry_run else ''}Found {len(matching_datasets)} datasets matching '{name_pattern}':")
+    for dataset in matching_datasets:
+        dataset_id = dataset.get("id")
+        table_name = dataset.get("table_name", "Unknown")
+        schema = dataset.get("schema", "")
+        print(f"  - Dataset ID {dataset_id}: {schema}.{table_name}")
+        
+        if not dry_run:
+            try:
+                delete_dataset(session, base_url, dataset_id)
+                deleted_ids.append(dataset_id)
+            except Exception as e:
+                print(f"⚠️  Failed to delete dataset {dataset_id}: {e}")
+    
+    if dry_run:
+        print(f"\nℹ️  DRY RUN: No datasets were actually deleted. Set dry_run=False to delete.")
+    else:
+        print(f"\n✅ Deleted {len(deleted_ids)} datasets")
+    
+    return deleted_ids

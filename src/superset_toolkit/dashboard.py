@@ -1,11 +1,11 @@
-"""Dashboard creation and management for Superset."""
+"""Dashboard creation, management, and deletion for Superset."""
 
 import json
 from typing import List, Dict, Any, Optional
 
 import requests
 
-from .exceptions import DashboardError
+from .exceptions import DashboardError, SupersetApiError
 from .ensure import get_dashboard_id_by_slug
 
 
@@ -13,7 +13,8 @@ def create_dashboard(
     session: requests.Session,
     base_url: str,
     title: str,
-    slug: str
+    slug: str,
+    user_id: Optional[int] = None
 ) -> int:
     """
     Create a new dashboard.
@@ -23,6 +24,7 @@ def create_dashboard(
         base_url: Superset base URL
         title: Dashboard title
         slug: Dashboard slug
+        user_id: Optional user ID for ownership. If None, uses authenticated user.
         
     Returns:
         Dashboard ID
@@ -43,7 +45,15 @@ def create_dashboard(
         "published": True
     }
     
-    response = session.post(f"{base_url}/api/v1/dashboard/", json=payload)
+    # Set ownership if user_id is provided
+    if user_id is not None:
+        payload["owners"] = [user_id]
+    
+    response = session.post(
+        f"{base_url}/api/v1/dashboard/",
+        json=payload,
+        headers={"Referer": base_url}
+    )
     
     if response.status_code != 201:
         raise DashboardError(
@@ -58,7 +68,8 @@ def ensure_dashboard(
     session: requests.Session,
     base_url: str,
     title: str,
-    slug: str
+    slug: str,
+    user_id: Optional[int] = None
 ) -> int:
     """
     Ensure a dashboard exists, creating it if necessary.
@@ -68,6 +79,7 @@ def ensure_dashboard(
         base_url: Superset base URL
         title: Dashboard title
         slug: Dashboard slug
+        user_id: Optional user ID for ownership. If None, uses authenticated user.
         
     Returns:
         Dashboard ID
@@ -76,7 +88,7 @@ def ensure_dashboard(
     if existing:
         return existing
     
-    return create_dashboard(session, base_url, title, slug)
+    return create_dashboard(session, base_url, title, slug, user_id)
 
 
 def create_markdown_component(
@@ -141,7 +153,8 @@ def update_dashboard_css(
     print("🎨 Updating dashboard CSS...")
     response = session.put(
         f"{base_url}/api/v1/dashboard/{dashboard_id}",
-        json={"css": custom_css}
+        json={"css": custom_css},
+        headers={"Referer": base_url}
     )
     print(f"🎨 CSS update response status: {response.status_code}")
     
@@ -198,7 +211,8 @@ def _update_dashboard_position_json(
     """
     session.put(
         f"{base_url}/api/v1/dashboard/{dashboard_id}",
-        json={"position_json": json.dumps(position_json)}
+        json={"position_json": json.dumps(position_json)},
+        headers={"Referer": base_url}
     )
 
 
@@ -222,6 +236,7 @@ def link_chart_to_dashboard(
         response = session.put(
             f"{base_url}/api/v1/chart/{chart_id}",
             json={"dashboards": [dashboard_id]},
+            headers={"Referer": base_url}
         )
         
         if response.status_code not in [200, 201]:
@@ -229,6 +244,7 @@ def link_chart_to_dashboard(
             response2 = session.put(
                 f"{base_url}/api/v1/chart/{chart_id}",
                 json={"dashboards": [{"id": dashboard_id}]},
+                headers={"Referer": base_url}
             )
             if response2.status_code not in [200, 201]:
                 print(f"⚠️ Failed to link chart {chart_id} to dashboard {dashboard_id}: "
@@ -294,3 +310,144 @@ def add_charts_to_dashboard(
     # Also ensure chart ↔ dashboard relation for API responses to include chart definitions
     for cid in chart_ids:
         link_chart_to_dashboard(session, base_url, cid, dashboard_id)
+
+
+
+
+# ============================================================================
+# DASHBOARD DELETION FUNCTIONS
+# ============================================================================
+
+def delete_dashboard(
+    session: requests.Session,
+    base_url: str,
+    dashboard_id: int
+) -> bool:
+    """
+    Delete a dashboard by ID.
+    
+    Args:
+        session: Authenticated requests session
+        base_url: Superset base URL
+        dashboard_id: Dashboard ID to delete
+        
+    Returns:
+        True if successful
+        
+    Raises:
+        SupersetApiError: If deletion fails
+    """
+    response = session.delete(
+        f"{base_url}/api/v1/dashboard/{dashboard_id}",
+        headers={"Referer": base_url},
+        timeout=10
+    )
+    
+    if response.status_code not in [200, 204]:
+        raise SupersetApiError(
+            f"Failed to delete dashboard {dashboard_id}: HTTP {response.status_code} - {response.text}"
+        )
+    
+    print(f"✅ Deleted dashboard ID {dashboard_id}")
+    return True
+
+
+def delete_dashboards_by_username(
+    session: requests.Session,
+    base_url: str,
+    username: str,
+    dry_run: bool = True
+) -> List[int]:
+    """
+    Delete all dashboards owned by a specific username.
+    
+    Args:
+        session: Authenticated requests session
+        base_url: Superset base URL
+        username: Username whose dashboards to delete
+        dry_run: If True, only prints what would be deleted without deleting
+        
+    Returns:
+        List of deleted dashboard IDs
+    """
+    from .queries import get_dashboards_by_username
+    
+    dashboards = get_dashboards_by_username(session, base_url, username)
+    deleted_ids = []
+    
+    if not dashboards:
+        print(f"ℹ️  No dashboards found for user '{username}'")
+        return deleted_ids
+    
+    print(f"\n{'[DRY RUN] ' if dry_run else ''}Found {len(dashboards)} dashboards to delete:")
+    for dashboard in dashboards:
+        dashboard_id = dashboard.get("id")
+        dashboard_title = dashboard.get("dashboard_title", "Unknown")
+        print(f"  - Dashboard ID {dashboard_id}: {dashboard_title}")
+        
+        if not dry_run:
+            try:
+                delete_dashboard(session, base_url, dashboard_id)
+                deleted_ids.append(dashboard_id)
+            except Exception as e:
+                print(f"⚠️  Failed to delete dashboard {dashboard_id}: {e}")
+    
+    if dry_run:
+        print(f"\nℹ️  DRY RUN: No dashboards were actually deleted. Set dry_run=False to delete.")
+    else:
+        print(f"\n✅ Deleted {len(deleted_ids)} dashboards")
+    
+    return deleted_ids
+
+
+def delete_dashboards_by_name_pattern(
+    session: requests.Session,
+    base_url: str,
+    name_pattern: str,
+    dry_run: bool = True
+) -> List[int]:
+    """
+    Delete all dashboards matching a name pattern.
+    
+    Args:
+        session: Authenticated requests session
+        base_url: Superset base URL
+        name_pattern: Pattern to match in dashboard titles (substring match)
+        dry_run: If True, only prints what would be deleted without deleting
+        
+    Returns:
+        List of deleted dashboard IDs
+    """
+    from .queries import get_all_dashboards
+    
+    all_dashboards = get_all_dashboards(session, base_url)
+    matching_dashboards = [
+        dashboard for dashboard in all_dashboards 
+        if name_pattern in dashboard.get("dashboard_title", "")
+    ]
+    
+    deleted_ids = []
+    
+    if not matching_dashboards:
+        print(f"ℹ️  No dashboards found matching pattern '{name_pattern}'")
+        return deleted_ids
+    
+    print(f"\n{'[DRY RUN] ' if dry_run else ''}Found {len(matching_dashboards)} dashboards matching '{name_pattern}':")
+    for dashboard in matching_dashboards:
+        dashboard_id = dashboard.get("id")
+        dashboard_title = dashboard.get("dashboard_title", "Unknown")
+        print(f"  - Dashboard ID {dashboard_id}: {dashboard_title}")
+        
+        if not dry_run:
+            try:
+                delete_dashboard(session, base_url, dashboard_id)
+                deleted_ids.append(dashboard_id)
+            except Exception as e:
+                print(f"⚠️  Failed to delete dashboard {dashboard_id}: {e}")
+    
+    if dry_run:
+        print(f"\nℹ️  DRY RUN: No dashboards were actually deleted. Set dry_run=False to delete.")
+    else:
+        print(f"\n✅ Deleted {len(deleted_ids)} dashboards")
+    
+    return deleted_ids
