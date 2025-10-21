@@ -196,6 +196,42 @@ with SupersetClient() as client:
     print(f"Deleted: {len(cleanup['chart_ids'])} charts, {len(cleanup['dashboard_ids'])} dashboards")
 ```
 
+### Dataset Ownership Management
+
+```python
+from superset_toolkit import SupersetClient
+from superset_toolkit.datasets import add_dataset_owner, refresh_dataset_metadata
+from superset_toolkit.ensure import get_dataset_id
+
+# Login as admin (with privileges to modify ownership)
+client = SupersetClient()
+
+# Get dataset ID
+dataset_id = get_dataset_id(client.session, client.base_url, "sales_data", "public")
+
+# Refresh dataset metadata (update columns from database)
+refresh_dataset_metadata(client.session, client.base_url, dataset_id)
+
+# Add an owner to the dataset without removing existing owners
+# Admin logs in, but adds other users as owners for collaboration
+add_dataset_owner(
+    client.session, 
+    client.base_url, 
+    dataset_id, 
+    username="data_analyst"  # Add this user as owner
+)
+
+# Add multiple owners
+for username in ["analyst1", "analyst2", "analyst3"]:
+    add_dataset_owner(client.session, client.base_url, dataset_id, username)
+```
+
+**Key Features:**
+- ✅ **Preserves existing owners** - doesn't remove anyone
+- ✅ **Admin authentication** - login as admin, add others as owners
+- ✅ **Idempotent** - won't duplicate if user is already an owner
+- ✅ **Collaboration-friendly** - enable team access to datasets
+
 ## 🔧 Installation & Setup
 
 ```bash
